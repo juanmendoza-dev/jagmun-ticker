@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { COMPOSITE_NOISE, FIRM_NOISE, nextNoise, printDelay, pushSample } from './live.ts';
+import { COMPOSITE_NOISE, FIRM_NOISE, gridLines, nextNoise, printDelay, pushSample } from './live.ts';
 
 test('noise never exceeds its cap, however long it runs', () => {
   let n = 0;
@@ -29,8 +29,27 @@ test('prints are irregular', () => {
 
 test('the live series decimates rather than dropping its history', () => {
   let s: number[] = [];
-  for (let i = 0; i < 5000; i++) s = pushSample(s, i, 100);
+  for (let i = 0; i < 5000; i++) s = pushSample(s, i, 100).series;
   assert.ok(s.length <= 100);
   assert.equal(s[0], 0, 'still starts at the session open');
   assert.ok(s[s.length - 1] > 4900, 'and ends at the latest print');
+});
+
+test('decimation is announced so held indices can be halved with it', () => {
+  const short = pushSample([1, 2], 3, 100);
+  assert.deepEqual(short, { series: [1, 2, 3], decimated: false });
+  const full = pushSample([1, 2, 3], 4, 3);
+  assert.equal(full.decimated, true);
+  assert.deepEqual(full.series, [1, 3]);
+});
+
+test('gridlines land on round numbers inside the range', () => {
+  const g = gridLines(847, 1012);
+  assert.ok(g.length >= 3 && g.length <= 8, `got ${g.length}: ${g}`);
+  assert.ok(g[0] >= 847 && g[g.length - 1] <= 1012);
+  assert.ok(g.every((v) => Number.isInteger(v / (g[1] - g[0]))), 'evenly spaced round values');
+});
+
+test('gridlines survive a flat market', () => {
+  assert.ok(gridLines(1000, 1000.2).length >= 1);
 });

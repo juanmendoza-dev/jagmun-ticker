@@ -31,9 +31,25 @@ export function clamp(n: number, lo: number, hi: number): number {
 /**
  * The live session line. Samples of what the board is actually showing, so the chart
  * creeps along continuously instead of only stepping when the dais acts. Decimated
- * rather than truncated once it is long, so an eight-hour session keeps its shape.
+ * rather than truncated once it is long, so an eight-hour session keeps its whole shape
+ * — `decimated` tells the caller to halve any indices it is holding into the series.
  */
-export function pushSample(series: number[], value: number, max = 900): number[] {
+export function pushSample(
+  series: number[],
+  value: number,
+  max = 1200,
+): { series: number[]; decimated: boolean } {
   const next = [...series, value];
-  return next.length <= max ? next : next.filter((_, i) => i % 2 === 0);
+  if (next.length <= max) return { series: next, decimated: false };
+  return { series: next.filter((_, i) => i % 2 === 0), decimated: true };
+}
+
+/** Nice round gridline values covering [lo, hi], for the chart's price axis. */
+export function gridLines(lo: number, hi: number, want = 5): number[] {
+  const raw = (hi - lo) / want;
+  const mag = Math.pow(10, Math.floor(Math.log10(Math.max(raw, 1))));
+  const step = [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw) ?? mag * 10;
+  const out: number[] = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) out.push(Math.round(v * 100) / 100);
+  return out;
 }
