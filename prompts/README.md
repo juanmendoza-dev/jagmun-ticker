@@ -11,7 +11,7 @@ Naming: `NN-<tool>-<what-it-builds>.md`, numbered in the order they were written
 | 01 | [01-claude-design-composite-board.md](01-claude-design-composite-board.md) | Claude Design | Visual prototype of the board frame with the JAG Composite on stage |
 
 `docs/specs/jag-composite-board-design-spec.md` (what the board shows) and
-`docs/specs/jag-ingest-and-control-spec.md` (how things get onto it) remain the source of truth.
+`docs/specs/jag-control-panel-spec.md` (how the dais drives it) remain the source of truth.
 Prompts pull from them selectively —
 never paste the whole spec into a prompt, because most of it describes work the receiving
 tool is explicitly not supposed to do.
