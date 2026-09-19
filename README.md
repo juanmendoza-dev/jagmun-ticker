@@ -6,17 +6,26 @@ One number on a projector, one admin panel on the directors' phones. Directors j
 committee is going — debate, backrooms, overall flow — and add points to the economy or take them
 away. The board reacts: the number moves, the tape moves with it, a headline scrolls.
 
+**Live:** https://jagmun-ticker.vercel.app
+
 - **`/board`** — the projector. Fixed 16:9, dark, runs unattended all day.
 - **`/panel`** — the directors' phones. Eight buttons behind a passcode.
 
-## Deploying it (do this once)
+## Deploying it
 
-1. Push this repo to GitHub, then **Import Project** at [vercel.com/new](https://vercel.com/new).
-   Accept every default — it's a stock Next.js app.
-2. In the project, go to **Storage → Create Database → Postgres**, and attach it. Vercel sets
-   `POSTGRES_URL` for you. **This step is not optional** — without a database the app refuses to
-   start in production, on purpose, because otherwise each phone would silently see a different
-   market.
+Already deployed — `npx vercel --prod` ships a new version. The project is `jagmun-ticker`, and
+`DIRECTOR_PASSCODE` and `SESSION_SECRET` are already set as environment variables on it (rotate the
+passcode between conferences with `npx vercel env rm DIRECTOR_PASSCODE production` then
+`vercel env add`).
+
+To set it up from scratch somewhere else:
+
+1. **Import Project** at [vercel.com/new](https://vercel.com/new). Accept every default — it's a
+   stock Next.js app.
+2. In the project, go to **Storage → Create Database → Postgres** (Neon's free tier is fine), and
+   connect it to the project. Vercel sets `POSTGRES_URL` for you. **This step is not optional** —
+   without a database the app refuses to start in production, on purpose, because otherwise each
+   phone would silently see a different market.
 3. Go to **Settings → Environment Variables** and add:
 
    | Name | Value |
@@ -58,6 +67,9 @@ move exactly, including one that hit the floor.
 
 Set the session to `PRE-MARKET` before gavel-in, `OPEN` when you gavel, `CLOSE` at the end. The
 board prints continuously while it's open and freezes on the closing bell.
+
+**`RESET SESSION`**, at the bottom of the panel, wipes everything back to 1000.00 and pre-market —
+for between conferences or after a practice run. It asks twice and there is no undo for it.
 
 **The board laptop.** Open `/panel` on it once and enter the passcode before you open `/board` —
 the keys below are director actions and the server refuses them otherwise. If you forget, the board
