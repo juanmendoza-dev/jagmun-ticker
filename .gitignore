@@ -1,0 +1,3 @@
+# local reference material, not for the public repo
+*.pdf
+.DS_Store
