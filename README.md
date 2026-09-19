@@ -24,7 +24,15 @@ away. The board reacts: the number moves, the tape moves with it, a headline scr
    | `DIRECTOR_PASSCODE` | whatever you want the dais to type. Change it between conferences. |
    | `SESSION_SECRET` | any long random string — `openssl rand -hex 32` |
 
-4. Redeploy. Open `/board` on the projector laptop and `/panel` on every director's phone.
+4. Redeploy, then open **`/api/health`** once. It should say:
+
+   ```json
+   { "ok": true, "store": "postgres", "moves": 0, "passcodeSet": true }
+   ```
+
+   If it says anything else, fix that before the conference — that endpoint is the one check
+   that proves the database is attached and writable.
+5. Open `/board` on the projector laptop and `/panel` on every director's phone.
 
 The `moves` and `session` tables are created on the first request. There is nothing to migrate.
 
