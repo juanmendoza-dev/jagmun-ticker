@@ -241,7 +241,10 @@ Step 3 is already a usable system. Everything after it is polish.
 
 The board holds its state in memory and keeps rendering, scrolling, drifting and animating with
 no network at all. If the wifi dies mid-session the projector keeps running on its last state and
-a director drives it from keyboard controls on the board laptop itself. If everything dies, the
+a director drives it from keyboard controls on the board laptop itself (which must have entered the
+passcode once, like any other director device). Local moves made during an outage are discarded on
+reconnect in favour of the server's record — the alternative is a projector that disagrees with the
+database for the rest of the day. If everything dies, the
 Composite goes on a whiteboard at each crisis update — the promise in the background guide still
 gets kept.
 

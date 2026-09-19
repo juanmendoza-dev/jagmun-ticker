@@ -46,7 +46,12 @@ function migrate(): Promise<void> {
       status text not null default 'PRE'
     )`;
     await q`insert into session (id, status) values (1, 'PRE') on conflict (id) do nothing`;
-  })();
+  })().catch((e) => {
+    // Concurrent `create table if not exists` across cold-starting lambdas can lose a
+    // race in Postgres. Don't cache the rejection, or that instance 500s forever.
+    ready = null;
+    throw e;
+  });
   return ready;
 }
 

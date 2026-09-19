@@ -59,7 +59,11 @@ move exactly, including one that hit the floor.
 Set the session to `PRE-MARKET` before gavel-in — the board shows the how-to-read screen — then
 `OPEN` when you gavel and `CLOSE` at the end.
 
-**The board laptop.** Keys work directly on it, which is your fallback if the wifi dies:
+**The board laptop.** Open `/panel` on it once and enter the passcode before you open `/board` —
+the keys below are director actions and the server refuses them otherwise. If you forget, the board
+says `LOCKED` in the corner rather than pretending the move landed.
+
+Keys, once it's unlocked — this is your fallback if the wifi dies:
 
 | Key | Does |
 |---|---|
@@ -68,7 +72,9 @@ Set the session to `PRE-MARKET` before gavel-in — the board shows the how-to-r
 | `H` | show / hide the how-to-read screen |
 
 If the network goes down the board keeps rendering, scrolling and drifting on its last state, and
-keyboard moves apply locally until it comes back.
+keyboard moves apply locally until it comes back — at which point it resyncs to whatever the dais
+actually did on their phones, so the projector can't spend the afternoon quietly disagreeing with
+the database.
 
 ## The spec
 

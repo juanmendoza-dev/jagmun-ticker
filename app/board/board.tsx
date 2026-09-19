@@ -20,9 +20,12 @@ const IDLE_AFTER_MS = 12_000;
 export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) {
   const [state, setState] = useState<BoardState>(initial);
   const [offline, setOffline] = useState(false);
+  const [denied, setDenied] = useState(false);
   const [explainerOverride, setExplainerOverride] = useState<boolean | null>(null);
   const [tier, setTier] = useState<TierName>('REAL');
   const synced = useRef(false);
+  /** The newest move id at first sync — everything older than this is history. */
+  const baseline = useRef<string | null>(null);
 
   useScaleToViewport();
   const { composite, status, moves } = state;
@@ -30,8 +33,12 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
 
   // Poll. On any failure we keep the last good state and keep rendering — the board
   // must survive the wifi dying mid-session (spec AC#7), not blank out.
+  // After a local apply during an outage our cursor is ahead of the server's, so a
+  // plain `since=cursor` could match by coincidence and answer "unchanged" — leaving
+  // the projector quietly wrong for the rest of the session. Force a full resync.
+  const diverged = useRef(false);
   const cursorRef = useRef(-1);
-  cursorRef.current = synced.current ? state.cursor : -1;
+  cursorRef.current = synced.current && !diverged.current ? state.cursor : -1;
   useEffect(() => {
     let alive = true;
     const tick = async () => {
@@ -41,7 +48,11 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
         const body = await r.json();
         if (!alive) return;
         synced.current = true;
-        if (body.state) setState(body.state);
+        if (body.state) {
+          diverged.current = false;
+          setState(body.state);
+          if (!baseline.current) baseline.current = body.state.moves[0]?.id ?? 'none';
+        }
         // An unchanged poll still carries the session status, which the dais can flip
         // between moves.
         else if (body.status) setState((s) => (s.status === body.status ? s : { ...s, status: body.status }));
@@ -68,11 +79,16 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ id: crypto.randomUUID(), tier, dir, author: 'board' }),
         });
+        // A 401 is not an outage. Applying locally here would move the projector and
+        // nothing else, so refuse and say why: this laptop needs the passcode.
+        if (r.status === 401) return setDenied(true);
         if (!r.ok) throw new Error(String(r.status));
         const body = await r.json();
         if (body.state) setState(body.state);
+        setDenied(false);
       } catch {
         setOffline(true);
+        diverged.current = true;
         setState((s) => applyLocally(s, tier, dir));
       }
     },
@@ -110,8 +126,11 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
     [moves],
   );
 
-  const takeover = useRecentMove(latest?.id, latest?.tier === 'SYSTEMIC' ? 7000 : 0);
-  const bar = useRecentMove(latest?.id, latest?.tier === 'MAJOR' ? 10_000 : 0);
+  // Reloading the projector an hour after a Systemic must not replay its breaking-news
+  // takeover. Only moves that arrive after the first sync are choreographed.
+  const fresh = latest && baseline.current && latest.id !== baseline.current ? latest : undefined;
+  const takeover = useRecentMove(fresh?.id, fresh?.tier === 'SYSTEMIC' ? 7000 : 0);
+  const bar = useRecentMove(fresh?.id, fresh?.tier === 'MAJOR' ? 10_000 : 0);
   const atFloor = composite <= FLOOR;
   const floorAlert = useRecentMove(atFloor ? 'floor' : undefined, atFloor ? 9000 : 0);
 
@@ -180,23 +199,21 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
             <Gauge label="PUBLIC PANIC" value={g.panic} bad={g.panic !== 'LOW'} arrowless />
           </div>
 
-          {bar && latest && (
-            <div className={`bar ${latest.dir > 0 ? 'good' : ''}`}>{latest.headline}</div>
-          )}
+          {bar && fresh && <div className={`bar ${fresh.dir > 0 ? 'good' : ''}`}>{fresh.headline}</div>}
 
           <div className="keyhint">
             1–4 SIZE · ↑↓ MOVE · H EXPLAINER — NOW: {tier}
-            {offline ? ' · OFFLINE' : ''}
+            {denied ? ' · LOCKED — OPEN /panel AND ENTER THE PASSCODE' : offline ? ' · OFFLINE' : ''}
           </div>
           <div className="approx">VALUES APPROXIMATE</div>
           {state.ephemeral && <div className="warn">NO DATABASE — STATE WILL NOT SURVIVE</div>}
 
-          {takeover && latest && (
-            <div className={`takeover ${latest.dir > 0 ? 'good' : ''}`}>
+          {takeover && fresh && (
+            <div className={`takeover ${fresh.dir > 0 ? 'good' : ''}`}>
               <div className="kicker">BREAKING</div>
-              <div className="line">{strip(latest.headline)}</div>
+              <div className="line">{strip(fresh.headline)}</div>
               <div className="move num">
-                {latest.dir > 0 ? '▲' : '▼'} {signed(latest.delta, 2)} ON THE JAG COMPOSITE
+                {fresh.dir > 0 ? '▲' : '▼'} {signed(fresh.delta, 2)} ON THE JAG COMPOSITE
               </div>
             </div>
           )}
@@ -333,10 +350,24 @@ function useAnimatedComposite(target: number, drifting: boolean): number {
     return () => clearInterval(id);
   }, [drifting, target]);
 
+  // A browser that isn't painting — minimised, on another desktop, screen asleep —
+  // pauses requestAnimationFrame. Without this the headline number would sit at a stale
+  // value until someone looked at it. Timers keep firing, so snap on them instead.
+  const lastFrame = useRef(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (performance.now() - lastFrame.current < 1000) return;
+      current.current = target;
+      setShown(target);
+    }, 700);
+    return () => clearInterval(id);
+  }, [target]);
+
   useEffect(() => {
     let raf = 0;
     let prev = performance.now();
     const step = (now: number) => {
+      lastFrame.current = now;
       const dt = Math.min(now - prev, 100);
       prev = now;
       const goal = target + wobble.current;
