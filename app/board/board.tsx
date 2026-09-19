@@ -1,0 +1,391 @@
+'use client';
+
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  COMPOSITE_OPEN,
+  EXPLAINER,
+  FLOOR,
+  OPENING_CRAWL,
+  TIER_ORDER,
+  type TierName,
+} from '@/lib/constants.ts';
+import { gauges, resolveDelta, tape } from '@/lib/derive.ts';
+import { type BoardState, GAVEL_IN } from '@/lib/state.ts';
+import './board.css';
+
+const POLL_MS = 1500;
+/** How long the board must go untouched before the idle wobble starts. */
+const IDLE_AFTER_MS = 12_000;
+
+export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) {
+  const [state, setState] = useState<BoardState>(initial);
+  const [offline, setOffline] = useState(false);
+  const [explainer, setExplainer] = useState(false);
+  const [tier, setTier] = useState<TierName>('REAL');
+
+  useScaleToViewport();
+  const { composite, status, moves } = state;
+  const latest = moves[0];
+
+  // Poll. On any failure we keep the last good state and keep rendering — the board
+  // must survive the wifi dying mid-session (spec AC#7), not blank out.
+  const cursorRef = useRef(state.cursor);
+  cursorRef.current = state.cursor;
+  useEffect(() => {
+    let alive = true;
+    const tick = async () => {
+      try {
+        const r = await fetch(`/api/state?since=${cursorRef.current}`, { cache: 'no-store' });
+        if (!r.ok) throw new Error(String(r.status));
+        const body = await r.json();
+        if (!alive) return;
+        if (body.state) setState(body.state);
+        setOffline(false);
+      } catch {
+        if (alive) setOffline(true);
+      }
+    };
+    void tick();
+    const id = setInterval(tick, POLL_MS);
+    return () => {
+      alive = false;
+      clearInterval(id);
+    };
+  }, []);
+
+  // Keyboard fallback for the board laptop, for when the wifi is gone and the phones
+  // can't reach the server (spec §6.2). 1-4 pick a size, arrows fire it.
+  const fire = useCallback(
+    async (dir: 1 | -1) => {
+      try {
+        const r = await fetch('/api/move', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ id: crypto.randomUUID(), tier, dir, author: 'board' }),
+        });
+        if (!r.ok) throw new Error(String(r.status));
+        const body = await r.json();
+        if (body.state) setState(body.state);
+      } catch {
+        setOffline(true);
+        setState((s) => applyLocally(s, tier, dir));
+      }
+    },
+    [tier],
+  );
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const n = Number(e.key);
+      if (n >= 1 && n <= 4) return setTier(TIER_ORDER[n - 1]);
+      if (e.key === 'ArrowUp') return void fire(1);
+      if (e.key === 'ArrowDown') return void fire(-1);
+      if (e.key.toLowerCase() === 'h') return setExplainer((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [fire]);
+
+  const idle = status !== 'CLOSED' && Date.now() - lastMoveAt(state) > IDLE_AFTER_MS;
+  const shown = useAnimatedComposite(composite, idle && status === 'OPEN');
+
+  const g = gauges(composite);
+  const entries = tape(composite);
+  const change = composite - COMPOSITE_OPEN;
+  const pct = (change / COMPOSITE_OPEN) * 100;
+
+  const headlines = useMemo(
+    () => [...moves.map((m) => m.headline).filter(Boolean), ...OPENING_CRAWL],
+    [moves],
+  );
+
+  const takeover = useRecentMove(latest?.id, latest?.tier === 'SYSTEMIC' ? 7000 : 0);
+  const bar = useRecentMove(latest?.id, latest?.tier === 'MAJOR' ? 10_000 : 0);
+  const atFloor = composite <= FLOOR;
+  const floorAlert = useRecentMove(atFloor ? 'floor' : undefined, atFloor ? 9000 : 0);
+
+  return (
+    <div className="shell">
+      <div className="frame" id="frame">
+        <div className="tape">
+          <div className="tape-rail">
+            {[0, 1].map((copy) => (
+              <div key={copy} style={{ display: 'flex' }} aria-hidden={copy === 1}>
+                {entries.map((e) => (
+                  <div key={e.ticker} className="tape-entry num">
+                    {e.halted ? (
+                      <>
+                        <span className="tk halted">{e.ticker}</span>
+                        <span className="halted">0.00</span>
+                        <span className="halted">HALTED</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className={e.pct < 0 ? 'arrow down' : 'arrow up'}>
+                          {e.pct < 0 ? '▼' : '▲'}
+                        </span>
+                        <span className="tk">{e.ticker}</span>
+                        <span>{e.price.toFixed(2)}</span>
+                        <span className={e.pct < 0 ? 'down' : 'up'}>{signed(e.pct, 1)}%</span>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="stage">
+          <div className="masthead">
+            <div className="title">JAG COMPOSITE</div>
+            <div className={`chip ${status === 'CLOSED' ? 'closed' : ''}`}>
+              <span className="dot" />
+              {status === 'CLOSED' ? 'MARKET CLOSED' : status === 'PRE' ? 'PRE-MARKET' : 'IN SESSION'}
+              <Clock />
+            </div>
+          </div>
+
+          <div className="readout">
+            <div className={`composite num ${change < 0 ? 'down' : change > 0 ? 'up' : ''}`}>
+              {shown.toFixed(2)}
+            </div>
+            <div
+              key={latest?.id ?? 'open'}
+              className={`change num flash ${change < 0 ? 'down' : change > 0 ? 'up' : ''}`}
+            >
+              {change === 0 ? '—' : `${change < 0 ? '▼' : '▲'} ${signed(change, 2)}`}
+              {change !== 0 && ` (${signed(pct, 2)}%)`}
+            </div>
+            {status === 'CLOSED' && (
+              <div className="closed-banner">MARKET CLOSED — {composite.toFixed(2)}</div>
+            )}
+            <SessionChart points={state.chart} />
+          </div>
+
+          <div className="gauges">
+            <Gauge label="JOBS" value={`${g.jobs.toFixed(1)}%`} bad={g.jobs > 4.8} />
+            <Gauge label="HOMES LOST" value={`${g.homes.toFixed(2)}M`} bad={g.homes > 0.5} />
+            <Gauge label="PUBLIC PANIC" value={g.panic} bad={g.panic !== 'LOW'} arrowless />
+          </div>
+
+          {bar && latest && (
+            <div className={`bar ${latest.dir > 0 ? 'good' : ''}`}>{latest.headline}</div>
+          )}
+
+          <div className="keyhint">
+            1–4 SIZE · ↑↓ MOVE · H EXPLAINER — NOW: {tier}
+            {offline ? ' · OFFLINE' : ''}
+          </div>
+          <div className="approx">VALUES APPROXIMATE</div>
+          {state.ephemeral && <div className="warn">NO DATABASE — STATE WILL NOT SURVIVE</div>}
+
+          {takeover && latest && (
+            <div className={`takeover ${latest.dir > 0 ? 'good' : ''}`}>
+              <div className="kicker">BREAKING</div>
+              <div className="line">{latest.headline}</div>
+              <div className="move num">
+                {latest.dir > 0 ? '▲' : '▼'} {signed(latest.delta, 2)} ON THE JAG COMPOSITE
+              </div>
+            </div>
+          )}
+
+          {floorAlert && (
+            <div className="floor-alert">
+              <div className="big">GREAT DEPRESSION II</div>
+              <div className="sub">THE JAG COMPOSITE HAS HIT ITS FLOOR AT {FLOOR}</div>
+            </div>
+          )}
+
+          {explainer && (
+            <div className="explainer">
+              <h2>HOW TO READ THIS BOARD</h2>
+              <p>{EXPLAINER}</p>
+            </div>
+          )}
+        </div>
+
+        <div className="crawl">
+          <div className="crawl-rail">
+            {[0, 1].map((copy) => (
+              <div key={copy} style={{ display: 'flex' }} aria-hidden={copy === 1}>
+                {headlines.map((h, i) => (
+                  <div key={`${copy}-${i}`} className="crawl-item">
+                    {h.toUpperCase()}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Gauge({
+  label,
+  value,
+  bad,
+  arrowless,
+}: {
+  label: string;
+  value: string;
+  bad: boolean;
+  arrowless?: boolean;
+}) {
+  return (
+    <div>
+      <div className="gauge-label">{label}</div>
+      <div className={`gauge-value num ${bad ? 'down' : ''}`}>
+        <span>{value}</span>
+        {!arrowless && bad && <span className="arrow down">▲</span>}
+      </div>
+    </div>
+  );
+}
+
+function SessionChart({ points }: { points: number[] }) {
+  const w = 1728;
+  const h = 128;
+  const series = points.length > 1 ? points : [COMPOSITE_OPEN, COMPOSITE_OPEN];
+  const lo = Math.min(...series, COMPOSITE_OPEN) - 12;
+  const hi = Math.max(...series, COMPOSITE_OPEN) + 12;
+  const x = (i: number) => (i / (series.length - 1)) * w;
+  const y = (v: number) => h - ((v - lo) / (hi - lo)) * h;
+  const last = series[series.length - 1];
+  return (
+    <svg className="chart" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
+      <line
+        x1={0}
+        x2={w}
+        y1={y(COMPOSITE_OPEN)}
+        y2={y(COMPOSITE_OPEN)}
+        stroke="var(--ink-faint)"
+        strokeWidth={1.5}
+        strokeDasharray="10 12"
+      />
+      <polyline
+        points={series.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
+        fill="none"
+        stroke={last < COMPOSITE_OPEN ? 'var(--down)' : 'var(--up)'}
+        strokeWidth={4}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+function Clock() {
+  const [t, setT] = useState('');
+  useEffect(() => {
+    const set = () =>
+      setT(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+    set();
+    const id = setInterval(set, 10_000);
+    return () => clearInterval(id);
+  }, []);
+  return <span className="num">{t}</span>;
+}
+
+/**
+ * Eases the rendered number toward its target, which gives the ~1.5s count-up on a move.
+ * While idle it also wobbles ±0.3% so the screen is never frozen during unmoderated
+ * caucus. The wobble is display-only — it never touches stored state, or eight hours of
+ * it would random-walk the index and replay could not reproduce the board.
+ */
+function useAnimatedComposite(target: number, drifting: boolean): number {
+  const [shown, setShown] = useState(target);
+  const current = useRef(target);
+  const wobble = useRef(0);
+
+  useEffect(() => {
+    if (!drifting) {
+      wobble.current = 0;
+      return;
+    }
+    const id = setInterval(() => {
+      wobble.current = (Math.random() - 0.5) * 2 * 0.003 * target;
+    }, 2600);
+    return () => clearInterval(id);
+  }, [drifting, target]);
+
+  useEffect(() => {
+    let raf = 0;
+    const step = () => {
+      const goal = target + wobble.current;
+      const next = current.current + (goal - current.current) * 0.06;
+      current.current = Math.abs(goal - next) < 0.005 ? goal : next;
+      setShown(current.current);
+      raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target]);
+
+  return shown;
+}
+
+/** True for `ms` after `key` changes. Drives the Major bar and the Systemic takeover. */
+function useRecentMove(key: string | undefined, ms: number): boolean {
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (!key || ms <= 0) {
+      setOn(false);
+      return;
+    }
+    setOn(true);
+    const id = setTimeout(() => setOn(false), ms);
+    return () => clearTimeout(id);
+  }, [key, ms]);
+  return on;
+}
+
+/** Scale the 1920x1080 frame to fit whatever the projector actually is. */
+function useScaleToViewport() {
+  useEffect(() => {
+    const fit = () => {
+      const el = document.getElementById('frame');
+      if (!el) return;
+      const s = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
+      el.style.transform = `translate(${(window.innerWidth - 1920 * s) / 2}px, ${
+        (window.innerHeight - 1080 * s) / 2
+      }px) scale(${s})`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, []);
+}
+
+function lastMoveAt(s: BoardState): number {
+  const at = s.moves[0]?.at;
+  return at ? new Date(at).getTime() : 0;
+}
+
+function signed(n: number, dp: number): string {
+  return `${n > 0 ? '+' : n < 0 ? '−' : ''}${Math.abs(n).toFixed(dp)}`;
+}
+
+/** Last-resort local apply, used only when the POST failed and the room is watching. */
+function applyLocally(s: BoardState, tier: TierName, dir: 1 | -1): BoardState {
+  const delta = resolveDelta(s.composite, tier, dir);
+  const move = {
+    id: crypto.randomUUID(),
+    delta,
+    tier,
+    dir,
+    headline: dir > 0 ? 'MARKETS RALLY ON COMMITTEE ACTION' : 'MARKETS SLIDE AS COMMITTEE STALLS',
+    author: 'board',
+    at: new Date().toISOString(),
+  };
+  return {
+    ...s,
+    composite: Math.round((s.composite + delta) * 100) / 100,
+    cursor: s.cursor + 1,
+    moves: [move, ...s.moves],
+    chart: [...s.chart, Math.round((s.composite + delta) * 100) / 100],
+  };
+}

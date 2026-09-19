@@ -1,0 +1,44 @@
+/* The board is a fixed dark product. No light theme, no toggle — a light theme
+   washes out on cheap conference AV. */
+
+:root {
+  --ground: #07090d;
+  --panel: #10141c;
+  --line: #222a36;
+  --ink: #f2f5fa;
+  --ink-dim: #8c98ab;
+  --ink-faint: #4d5768;
+  --up: #21c776;
+  --down: #ff4d4d;
+  --halted: #6b7585;
+  --font-sans: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.up {
+  color: var(--up);
+}
+.down {
+  color: var(--down);
+}
+.halted {
+  color: var(--halted);
+}
