@@ -24,6 +24,7 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
   const [state, setState] = useState<BoardState>(initial);
   const [offline, setOffline] = useState(false);
   const [denied, setDenied] = useState(false);
+  const [serverError, setServerError] = useState(false);
   const [tier, setTier] = useState<TierName>('REAL');
   const synced = useRef(false);
   /** The newest move id at first sync — everything older than this is history. */
@@ -85,10 +86,14 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
         // A 401 is not an outage. Applying locally here would move the projector and
         // nothing else, so refuse and say why: this laptop needs the passcode.
         if (r.status === 401) return setDenied(true);
+        // The server answered and failed — a broken backend, not a dead network. Say so,
+        // but still apply locally: the room is watching and the committee continues.
+        if (r.status >= 500) setServerError(true);
         if (!r.ok) throw new Error(String(r.status));
         const body = await r.json();
         if (body.state) setState(body.state);
         setDenied(false);
+        setServerError(false);
       } catch {
         setOffline(true);
         diverged.current = true;
@@ -206,7 +211,13 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
 
           <div className="keyhint">
             1–4 SIZE · ↑↓ MOVE · H EXPLAINER — NOW: {tier}
-            {denied ? ' · LOCKED — OPEN /panel AND ENTER THE PASSCODE' : offline ? ' · OFFLINE' : ''}
+            {denied
+              ? ' · LOCKED — OPEN /panel AND ENTER THE PASSCODE'
+              : serverError
+                ? ' · SERVER ERROR — CHECK /api/health'
+                : offline
+                  ? ' · OFFLINE'
+                  : ''}
           </div>
           <div className="approx">VALUES APPROXIMATE</div>
           {state.ephemeral && <div className="warn">NO DATABASE — STATE WILL NOT SURVIVE</div>}

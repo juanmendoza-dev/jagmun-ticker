@@ -94,25 +94,44 @@ function Controls() {
     };
   }, []);
 
-  const post = async (payload: Record<string, unknown>) => {
+  /**
+   * One place for every call the panel makes, because a director tapping a button and
+   * seeing nothing happen is the worst failure this thing has. Whatever goes wrong,
+   * they get a sentence saying what and what to do about it.
+   */
+  const call = async (path: string, payload?: Record<string, unknown>) => {
     setBusy(true);
     setErr('');
     try {
-      const r = await fetch('/api/move', {
+      // A rejected fetch throws whatever the browser felt like saying ("Load failed",
+      // "NetworkError"), which is no use to anyone standing in a committee room.
+      const r = await fetch(path, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: crypto.randomUUID(), author: who || 'dais', ...payload }),
+        body: payload ? JSON.stringify(payload) : undefined,
+      }).catch(() => {
+        throw new Error("No connection — this phone can't reach the server.");
       });
+      if (!r.ok) throw new Error(await explain(r));
       const body = await r.json();
-      if (!r.ok) throw new Error(body?.error ?? 'failed');
       setState(body.state);
-      setHeadline('');
+      return true;
     } catch (e) {
-      setErr(e instanceof Error ? e.message : 'failed');
+      setErr(e instanceof Error ? e.message : 'Something went wrong.');
+      return false;
     } finally {
       setBusy(false);
       setArmed(null);
     }
+  };
+
+  const post = async (payload: Record<string, unknown>) => {
+    const ok = await call('/api/move', {
+      id: crypto.randomUUID(),
+      author: who || 'dais',
+      ...payload,
+    });
+    if (ok) setHeadline('');
   };
 
   /**
@@ -140,21 +159,10 @@ function Controls() {
       return;
     }
     setArmedReset(false);
-    setBusy(true);
-    const r = await fetch('/api/reset', { method: 'POST' }).catch(() => null);
-    setBusy(false);
-    if (r?.ok) setState((await r.json()).state);
-    else setErr('reset failed');
+    await call('/api/reset');
   };
 
-  const setStatus = async (status: SessionStatus) => {
-    const r = await fetch('/api/session', {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ status }),
-    }).catch(() => null);
-    if (r?.ok) setState((await r.json()).state);
-  };
+  const setStatus = (status: SessionStatus) => call('/api/session', { status });
 
   const change = state.composite - COMPOSITE_OPEN;
   const undoneIds = new Set(state.moves.map((m) => m.undoes).filter(Boolean));
@@ -310,6 +318,22 @@ function Pair({
       ))}
     </>
   );
+}
+
+/** Turn a failed response into something a director can act on, standing up, mid-session. */
+async function explain(r: Response): Promise<string> {
+  if (r.status === 401) return 'Passcode expired — reload this page and enter it again.';
+  if (r.status >= 500) {
+    return 'The server could not save that. Most likely no database is attached yet — open /api/health.';
+  }
+  const body = await r.text().catch(() => '');
+  try {
+    const parsed = JSON.parse(body);
+    if (parsed?.error) return String(parsed.error);
+  } catch {
+    /* not JSON — fall through */
+  }
+  return `That didn't go through (${r.status}).`;
 }
 
 function signed(n: number): string {
