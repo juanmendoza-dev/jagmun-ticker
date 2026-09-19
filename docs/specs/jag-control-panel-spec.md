@@ -81,7 +81,59 @@ Every move writes to the crawl (design spec §8), so every move needs a headline
 
 Skipping both is allowed; a generic market-move headline is used.
 
-### 2.3 Undo
+### 2.3 Per-delegate standing — how you punish a specific person
+
+The six firm delegates already have a personal scoreboard: their share price and health bar. The
+nine government delegates have none, so a director has no way to make a bad crisis note land on the
+delegate who wrote it. This closes that gap.
+
+**Every government seat carries a credibility rating**, using the same four-state vocabulary as firm
+health so the room only has to learn one thing:
+
+```
+firms:        HEALTHY  →  SHAKY  →  FAILING  →  COLLAPSED
+government:   TRUSTED  →  CREDIBLE  →  DOUBTED  →  DISCREDITED
+```
+
+Everyone opens at `CREDIBLE`. Cox writes a note that would have made the crisis worse, the director
+taps Cox and taps down: Cox goes to `DOUBTED`, and it is on the Policy Board next to his
+short-selling toggle for the rest of the session.
+
+This is historically real, not a gamified punishment invented for the committee — in 2008 the market
+priced whether the Fed, Treasury and the SEC knew what they were doing, and Cox in particular was
+widely judged to have lost the room. Delegates do not need that explained to feel it.
+
+**Credibility has teeth, or it is just a shaming bar.** It scales how much that delegate's actions
+move the Composite:
+
+| Standing | Their actions move the market at |
+|---|---|
+| `TRUSTED` | 125% |
+| `CREDIBLE` | 100% |
+| `DOUBTED` | 75% |
+| `DISCREDITED` | 50% |
+
+So a discredited Paulson can still pass TARP — it just does half of what it should, because nobody
+believes him. That is the lesson, and it arrives without a lecture.
+
+**`DISCREDITED` is recoverable.** Unlike `COLLAPSED`, which is terminal for a firm, a government
+delegate can climb back with good play. A delegate written off in hour one must have a road back, or
+they spend the rest of the conference with nothing to do.
+
+On the panel: selecting any delegate gives the same up/down pair. For a firm delegate it moves the
+share price; for a government delegate it moves credibility. One gesture, two renderings. A director
+does not have to remember which kind of seat they are punishing.
+
+Each standing change can optionally ripple to the Composite as a Tier 1 move — a checkbox, on by
+default, because a delegate losing the room usually does move the market a little.
+
+**One caution worth taking on deliberately:** this puts a named delegate's `DISCREDITED` on a
+projector in front of thirty people. The design spec §10 decision #3 already accepted that trade for
+firm health bars, and the answer here is the same — the positions are the substance. But the panel
+carries a **hide names on Policy Board** toggle for the case where a beginner is visibly struggling
+and the bar would do more harm than good.
+
+### 2.4 Undo
 
 One tap undoes the last move. Undo appends a reversing move rather than rewriting history, so the
 recent list stays honest and the board animates back.
@@ -145,7 +197,7 @@ to keyboard controls on the board laptop itself.
 4. Panel: composite up/down at four tiers, recent list, undo.
 5. Top switcher — targeting and board lock.
 6. Firm controls and health selector.
-7. Policy Board controls for the nine.
+7. Policy Board controls for the nine, plus credibility ratings (§2.3).
 8. Passcodes.
 9. Reason menu and headline pools.
 
@@ -173,7 +225,8 @@ Extends the design spec §13; none of those are replaced.
 2. Every move writes a headline to the crawl.
 3. Any move can be undone in one tap.
 4. The top switcher cuts the projector to any market and back to auto-rotation.
-5. All fifteen delegates have something on the panel that moves their thing.
+5. All fifteen delegates have something on the panel that moves their thing, and every one of them
+   can be individually rewarded or punished — share price for the six, credibility for the nine.
 6. With wifi off, the board keeps running (design spec AC#4).
 7. Replaying moves from the gavel-in snapshot reproduces the board exactly (design spec AC#5).
 
@@ -188,6 +241,8 @@ Extends the design spec §13; none of those are replaced.
 | §12 "Authentication — none needed" | **Superseded** by §4.3: two passcodes, because the URL is public. |
 | §12 "State schema — out of scope" | **Now specified:** §4.2, replay over the snapshot. |
 | §9 Operator surface | Realized as this panel, reachable from any phone rather than a second laptop screen. |
+| §3.8 Policy Board | **Adds a credibility rating per seat** (§2.3), rendered with the same segmented bar as firm health. |
+| §5 Measures | **Adds credibility** as a fifth measure, and as a multiplier on how far that delegate's actions move the Composite. |
 
 Everything else — the nine profiles, four tiers, delegate mapping, choreography, visual rules —
 is untouched.
