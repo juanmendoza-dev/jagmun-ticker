@@ -215,7 +215,19 @@ the room can actually read.
   between conferences.
 - **No model, no API key, no image storage.** Nothing to configure, nothing to bill.
 
-### 6.1 Order to build in
+### 6.1 Built
+
+All of it, in this order:
+
+1. `/board` rendering from a hardcoded state object, with the derived tape and gauges.
+2. Postgres, `POST /api/move`, `GET /api/state?since=`, board polls.
+3. `/panel` — the eight buttons, the recent list, undo.
+4. Passcode.
+5. Headline field, session open/close, the Systemic takeover, `/api/health`.
+
+The original plan, kept because it's the order to redo it in if it ever gets rewritten:
+
+### 6.1a Order to build in
 
 1. `/board` renders from a hardcoded state object, with the derived tape and gauges. No server.
 2. Postgres, `POST /api/move`, `GET /api/state?since=`, board polls. *Now the projector moves.*
