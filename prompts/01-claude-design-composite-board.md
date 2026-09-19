@@ -41,7 +41,7 @@ Three horizontal bands. The top and bottom bands never stop moving. The middle i
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│ ▼WFC 24.18 -3.1%   ▼BAC 18.40 -6.2%   ▲MCO 31.02 +0.8%  ...  │  TAPE (always scrolling)
+│ ▼WFC 23.36 -18.0%  ▼BAC 16.95 -23.3%  ▼MCO 26.93 -19.4% ...  │  TAPE (always scrolling)
 ├───────────────────────────────────────────────────────────────┤
 │                     JAG COMPOSITE                             │
 │                        847.30                                 │
@@ -51,7 +51,7 @@ Three horizontal bands. The top and bottom bands never stop moving. The middle i
 │               ╲____╱╲______                                   │
 │                                                               │
 │      JOBS          HOMES LOST      PUBLIC PANIC               │
-│      6.1% ▲        1.2M ▲          HIGH                       │
+│      6.63% ▲       1.03M ▲         HIGH                       │
 ├───────────────────────────────────────────────────────────────┤
 │ BREAKING: TREASURY STALLS ON RESCUE PACKAGE                   │  CRAWL (always scrolling)
 └───────────────────────────────────────────────────────────────┘
@@ -73,8 +73,8 @@ Element by element:
   reference line at 1,000 (the open) is welcome.
 - **Three gauges** — deliberately *not* financial metrics. "Credit availability" means nothing to
   a beginner; these mean something to everyone:
-  - `JOBS` — `6.1% ▲` (unemployment; up is bad)
-  - `HOMES LOST` — `1.2M ▲` (foreclosures; up is bad)
+  - `JOBS` — `6.63% ▲` (unemployment; up is bad)
+  - `HOMES LOST` — `1.03M ▲` (foreclosures; up is bad)
   - `PUBLIC PANIC` — `HIGH` (one of `LOW / ELEVATED / HIGH / SEVERE`; up is bad)
 
   All three are computed from the Composite, not set by hand — as the index falls, jobs and homes
@@ -85,8 +85,8 @@ Element by element:
 Continuous right-to-left scroll, seamless loop. Seven entries, repeating:
 
 ```
-▼ WFC  24.18  -3.1%     ▼ BAC  18.40  -6.2%     ▲ MCO  31.02  +0.8%
-▼ NYT  12.64  -2.4%     ▼ WPO 388.50  -1.9%     ▼ GE   24.87  -4.5%
+▼ WFC  23.36 -18.0%     ▼ BAC  16.95 -23.3%     ▼ MCO  26.93 -19.4%
+▼ NYT  12.17 -12.4%     ▼ WPO 363.95  -9.5%     ▼ GE   23.13 -15.3%
   LEH   0.00  HALTED
 ```
 

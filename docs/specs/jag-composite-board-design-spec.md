@@ -32,7 +32,7 @@ bottom never stop moving, the middle is the number.
 
 ```
 ┌───────────────────────────────────────────────────────────────┐
-│ ▼WFC 24.18 -3.1%   ▼BAC 18.40 -6.2%   ▲MCO 31.02 +0.8%  ...  │  TAPE
+│ ▼WFC 23.36 -18.0%  ▼BAC 16.95 -23.3%  ▼MCO 26.93 -19.4% ...  │  TAPE
 ├───────────────────────────────────────────────────────────────┤
 │                     JAG COMPOSITE                             │
 │                        847.30                                 │
@@ -42,7 +42,7 @@ bottom never stop moving, the middle is the number.
 │               ╲____╱╲______                                   │
 │                                                               │
 │      JOBS          HOMES LOST      PUBLIC PANIC               │
-│      6.1% ▲        1.2M ▲          HIGH                       │
+│      6.63% ▲       1.03M ▲         HIGH                       │
 ├───────────────────────────────────────────────────────────────┤
 │ BREAKING: TREASURY STALLS ON RESCUE PACKAGE                   │  CRAWL
 └───────────────────────────────────────────────────────────────┘
@@ -56,7 +56,9 @@ bottom never stop moving, the middle is the number.
   only: no gridlines, no axis labels, no legend.
 - **Three gauges** — jobs, homes lost, public panic. Derived ([§4](#4-everything-else-is-derived)),
   not controlled.
-- **Tape** — the six firms plus `LEH 0.00 HALTED`, scrolling, seamless loop. Derived.
+- **Tape** — the six firms plus `LEH 0.00 HALTED`, scrolling, seamless loop. Derived. Each
+  percentage is change from that firm's opening price, the same basis as the Composite's change
+  from 1000 — not change since the last move, which would flicker.
 - **Crawl** — headlines, most recent first, scrolling, business-news register.
 - **Status chip** — `IN SESSION` plus a clock, so the room knows this is live and not a slide.
 - **`VALUES APPROXIMATE`** — small, low-contrast, always present. Opening share prices are
@@ -70,7 +72,9 @@ bottom never stop moving, the middle is the number.
 - **Tabular figures everywhere** (`font-variant-numeric: tabular-nums`) so digits don't jitter.
 - **Color means one thing each:** green up, red down, grey halted. Nothing else gets color.
 - **The board never freezes.** Tape and crawl always scroll; when nothing has happened for a
-  while the Composite drifts ±0.3% so the screen is alive during unmoderated caucus.
+  while the rendered Composite wobbles ±0.3% around its true value so the screen is alive during
+  unmoderated caucus. **Drift is display-only** — it never writes to stored state, or eight hours
+  of wobble would random-walk the index and replay could not reproduce it.
 - Respect `prefers-reduced-motion` on the continuous scrollers.
 
 ### 2.2 Motion
@@ -130,6 +134,12 @@ menus, no pools — a director who has three seconds types nothing and taps a bu
 
 **Undo** appends a reversing move rather than rewriting history, so the log stays honest and the
 board animates back. One tap. A phone in a dim room produces fat-fingers; this is not optional.
+
+**A move is stored as points, not as a percentage.** The tier is a percentage at the instant the
+director taps — resolved against the current Composite, clamped at the floor — and what gets
+written is the signed point delta actually applied. Undo appends its exact negation. Storing the
+percentage instead would break undo outright: −20% off 1000 is 800, and +20% off 800 is 960, not
+1000.
 
 **Session control** sits at the bottom, small and out of the way: `OPEN` / `CLOSE`. Closing
 freezes the board at `MARKET CLOSED — 847.30`; opening the next session resumes from that close.
@@ -195,8 +205,9 @@ the room can actually read.
   append-only `moves` table. A conference is a couple hundred rows. Don't over-engineer this.
 - **Polling, not websockets** — serverless can't hold a socket. `GET /api/state?since=<n>` every
   1.5s from the board, 3s from the panel. A cursor is a number, so reconnects are free.
-- **State is derived by replaying moves** over the committed gavel-in constants. That's what makes
-  undo and a mid-conference restart both work, and it's ~20 lines.
+- **State is derived by replaying moves** over the committed gavel-in constants — the Composite is
+  1000 plus the sum of every stored point delta. That's what makes undo and a mid-conference
+  restart both work, and it's ~20 lines. Because deltas are points, replay is exact.
 - **Each move carries a client-generated id** with a unique constraint, so a phone retrying on bad
   wifi can't double-apply a Systemic.
 - **One passcode**, shared by the directors, exchanged for a signed httpOnly cookie. The URL is
