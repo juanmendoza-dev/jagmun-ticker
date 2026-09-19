@@ -118,7 +118,13 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
   // the whole point of a closing bell.
   const live = status !== 'CLOSED';
   const { shown, tick, moving } = useLiveComposite(composite, live);
-  const { series, markers, openedAt } = useLiveSeries(state.chart, shown, live, composite);
+  const { series, markers, openedAt } = useLiveSeries(
+    state.chart,
+    shown,
+    live,
+    composite,
+    state.cursor,
+  );
 
   const g = gauges(shown);
   const change = shown - COMPOSITE_OPEN;
@@ -425,10 +431,16 @@ function useLiveComposite(target: number, live: boolean) {
  * than stepping only when the dais acts — and remembers where in that line each real
  * move landed, so the chart can mark them.
  */
-function useLiveSeries(moveChart: number[], shown: number, live: boolean, target: number) {
+function useLiveSeries(
+  moveChart: number[],
+  shown: number,
+  live: boolean,
+  target: number,
+  cursor: number,
+) {
   const [series, setSeries] = useState<number[]>(moveChart);
   const [markers, setMarkers] = useState<number[]>([]);
-  const [openedAt] = useState(() => clockLabel());
+  const [openedAt, setOpenedAt] = useState(() => clockLabel());
 
   const shownRef = useRef(shown);
   shownRef.current = shown;
@@ -463,6 +475,19 @@ function useLiveSeries(moveChart: number[], shown: number, live: boolean, target
     marked.current = target;
     setMarkers((m) => [...m, lengthRef.current]);
   }, [target]);
+
+  // The dais reset the session: the drawn line is somebody else's session now, so drop
+  // it rather than leaving the old shape on the projector.
+  const lastCursor = useRef(cursor);
+  useEffect(() => {
+    if (cursor < lastCursor.current) {
+      setSeries([COMPOSITE_OPEN]);
+      setMarkers([]);
+      setOpenedAt(clockLabel());
+      marked.current = targetRef.current;
+    }
+    lastCursor.current = cursor;
+  }, [cursor]);
 
   useEffect(() => {
     if (!live) return;

@@ -216,6 +216,33 @@ input.who-field {
   border-color: var(--ink-dim);
 }
 
+.danger {
+  margin-top: 34px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.danger button {
+  appearance: none;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-faint);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  padding: 11px 20px;
+}
+
+/* Armed, it stops looking like furniture. */
+.danger button.armed {
+  border-color: var(--down);
+  background: var(--down);
+  color: #fff;
+  font-weight: 700;
+}
+
 .note {
   margin-top: 18px;
   font-size: 12px;

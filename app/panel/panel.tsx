@@ -57,6 +57,7 @@ function Controls() {
   const [armed, setArmed] = useState<string | null>(null);
   const [err, setErr] = useState('');
   const [who, setWho] = useState('');
+  const [armedReset, setArmedReset] = useState(false);
   const synced = useRef(false);
   const cursor = useRef(-1);
   cursor.current = synced.current ? state.cursor : -1;
@@ -125,6 +126,25 @@ function Controls() {
       return;
     }
     void post({ tier, dir, headline });
+  };
+
+  /**
+   * Reset is the one thing here that can't be undone, so it asks twice and disarms
+   * itself after a few seconds — a phone in a pocket must not be able to wipe the
+   * session with one stray tap.
+   */
+  const reset = async () => {
+    if (!armedReset) {
+      setArmedReset(true);
+      setTimeout(() => setArmedReset(false), 4000);
+      return;
+    }
+    setArmedReset(false);
+    setBusy(true);
+    const r = await fetch('/api/reset', { method: 'POST' }).catch(() => null);
+    setBusy(false);
+    if (r?.ok) setState((await r.json()).state);
+    else setErr('reset failed');
   };
 
   const setStatus = async (status: SessionStatus) => {
@@ -217,6 +237,17 @@ function Controls() {
             <span className="who">{m.author}</span>
           </div>
         ))}
+      </div>
+
+      <div className="danger">
+        <button className={armedReset ? 'armed' : ''} disabled={busy} onClick={() => void reset()}>
+          {armedReset ? 'TAP AGAIN TO WIPE THE SESSION' : 'RESET SESSION'}
+        </button>
+        {armedReset && (
+          <div className="note">
+            Back to 1000.00 and pre-market. Every move is deleted — this one has no undo.
+          </div>
+        )}
       </div>
 
       <div className="session">

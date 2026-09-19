@@ -15,6 +15,8 @@ export type Store = {
   setStatus(s: SessionStatus): Promise<void>;
   /** Returns false if this id was already recorded, so a retrying phone can't double-apply. */
   append(m: Move): Promise<boolean>;
+  /** Wipes the session back to the gavel-in snapshot. Not undoable — see the panel. */
+  reset(): Promise<void>;
 };
 
 /* ── postgres ──────────────────────────────────────────────────────── */
@@ -91,6 +93,12 @@ const pg: Store = {
       returning id`;
     return rows.length > 0;
   },
+  async reset() {
+    await migrate();
+    const q = client();
+    await q`delete from moves`;
+    await q`update session set status = 'PRE' where id = 1`;
+  },
 };
 
 /* ── in-memory, for `npm run dev` with no database attached ────────── */
@@ -106,6 +114,10 @@ const memory: Store = {
     if (mem.moves.some((x) => x.id === m.id)) return false;
     mem.moves.push(m);
     return true;
+  },
+  reset: async () => {
+    mem.moves = [];
+    mem.status = 'PRE';
   },
 };
 
