@@ -34,26 +34,27 @@ bottom never stop moving, the middle is the number.
 ┌───────────────────────────────────────────────────────────────┐
 │ ▼WFC 23.36 -18.0%  ▼BAC 16.95 -23.3%  ▼MCO 26.93 -19.4% ...  │  TAPE
 ├───────────────────────────────────────────────────────────────┤
-│                     JAG COMPOSITE                             │
-│                        847.30                                 │
-│                  ▼ -152.70  (-15.27%)                         │
-│                                                               │
-│         ╱╲___                                                 │  session chart
-│               ╲____╱╲______                                   │
-│                                                               │
-│      JOBS          HOMES LOST      PUBLIC PANIC               │
-│      6.63% ▲       1.03M ▲         HIGH                       │
+│ JAG COMPOSITE                                                 │
+│ ▼ 847.30   ▼ -152.70 (-15.27%)                                │  quote line
+│  ····················································· OPEN 1000
+│  ╲                                              ┌──────┐      │
+│   ╲___●___                                      │847.30│      │  THE CHART
+│           ╲______●________╱▔▔▔╲____●______      └──────┘      │
+│  09:12                                    11:48              │
+│  JOBS 6.63% ▲      HOMES LOST 1.03M ▲      PUBLIC PANIC HIGH  │
 ├───────────────────────────────────────────────────────────────┤
 │ BREAKING: TREASURY STALLS ON RESCUE PACKAGE                   │  CRAWL
 └───────────────────────────────────────────────────────────────┘
 ```
 
-- **The Composite** — largest thing on screen by a wide margin, ≥ 120px. Opens at `1000.00`.
-  This is the only fact a delegate needs: *we started at a thousand, we're at 847, higher is
-  better.*
-- **The change** — from the 1000.00 open, with arrow and sign.
-- **Session chart** — a plain line from gavel-in to now, faint reference line at 1000. Shape
-  only: no gridlines, no axis labels, no legend.
+- **The chart is the middle of the board**, not a sparkline under a number. Filled area under the
+  line, a price axis down the right, the 1000 open drawn and labelled, a tag riding the live value,
+  a pulsing head at the drawing end, and a ring on the line at every point where a director
+  actually moved the market. It is a market chart, and it should read as one from the back of the
+  room. At the debrief a delegate can point at a step and say *that's when we let the bank fail*.
+- **The Composite** — a quote line above the chart, ≥ 120px. Opens at `1000.00`. This is the only
+  fact a delegate needs: *we started at a thousand, we're at 847, higher is better.*
+- **The change** — beside it, from the 1000.00 open, with arrow and sign.
 - **Three gauges** — jobs, homes lost, public panic. Derived ([§4](#4-everything-else-is-derived)),
   not controlled.
 - **Tape** — the six firms plus `LEH 0.00 HALTED`, scrolling, seamless loop. Derived. Each
@@ -265,7 +266,9 @@ gets kept.
 
 ## 7. The explainer screen
 
-A **How to read this board** screen, left up while delegates file in:
+A **How to read this board** screen, on a key (`H`) for the minutes before gavel-in. It is not the
+default view: the chart owns the middle of the board, because a room that walks in to a live market
+has already understood most of the explanation.
 
 > Big number is the economy. It starts at 1000 — higher is better. Under it: how many people have
 > jobs, how many families are losing their homes, and how panicked the public is. Up top, the

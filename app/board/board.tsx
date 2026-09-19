@@ -12,6 +12,7 @@ import {
 } from '@/lib/constants';
 import { gauges, resolveDelta, tape } from '@/lib/derive';
 import { COMPOSITE_NOISE, FIRM_NOISE, nextNoise, printDelay, pushSample } from '@/lib/live';
+import Chart from './chart';
 import { type BoardState, GAVEL_IN } from '@/lib/state';
 import './board.css';
 
@@ -23,7 +24,6 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
   const [state, setState] = useState<BoardState>(initial);
   const [offline, setOffline] = useState(false);
   const [denied, setDenied] = useState(false);
-  const [explainerOverride, setExplainerOverride] = useState<boolean | null>(null);
   const [tier, setTier] = useState<TierName>('REAL');
   const synced = useRef(false);
   /** The newest move id at first sync — everything older than this is history. */
@@ -104,23 +104,21 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
       if (n >= 1 && n <= 4) return setTier(TIER_ORDER[n - 1]);
       if (e.key === 'ArrowUp') return void fire(1);
       if (e.key === 'ArrowDown') return void fire(-1);
-      if (e.key.toLowerCase() === 'h') return setExplainerOverride((v) => !(v ?? preMarket.current));
+      if (e.key.toLowerCase() === 'h') return setExplainer((v) => !v);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [fire]);
 
-  // Pre-market, the board is the explainer — it's what delegates read while they file
-  // in, and nobody has to remember to press a key for it. H overrides either way.
-  const preMarket = useRef(false);
-  preMarket.current = status === 'PRE';
-  const explainer = explainerOverride ?? status === 'PRE';
+  // The chart owns the middle of the board. The how-to-read screen is still one key
+  // away for the minutes before gavel-in, but it no longer covers the market.
+  const [explainer, setExplainer] = useState(false);
 
   // The tape runs whenever the market is open. At the closing bell it freezes, which is
   // the whole point of a closing bell.
   const live = status !== 'CLOSED';
   const { shown, tick, moving } = useLiveComposite(composite, live);
-  const series = useLiveSeries(state.chart, shown, live);
+  const { series, markers, openedAt } = useLiveSeries(state.chart, shown, live, composite);
 
   const g = gauges(shown);
   const change = shown - COMPOSITE_OPEN;
@@ -158,36 +156,37 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
             </div>
           </div>
 
-          <div className="readout">
-            <div className="composite-row">
-              <span
-                key={tick.seq}
-                className={`pip ${tick.dir > 0 ? 'up' : tick.dir < 0 ? 'down' : 'flat'}`}
-              >
-                {tick.dir > 0 ? '▲' : tick.dir < 0 ? '▼' : '·'}
-              </span>
-              <span
-                className={`composite num ${moving ? 'counting' : ''} ${
-                  change < 0 ? 'down' : change > 0 ? 'up' : ''
-                }`}
-              >
-                {shown.toFixed(2)}
-              </span>
-              {/* Mirrors the pip so the number itself stays centred on the screen. */}
-              <span className="pip-spacer" aria-hidden="true" />
-            </div>
-            <div
+          <div className="quote">
+            <span
+              key={tick.seq}
+              className={`pip ${tick.dir > 0 ? 'up' : tick.dir < 0 ? 'down' : 'flat'}`}
+            >
+              {tick.dir > 0 ? '▲' : tick.dir < 0 ? '▼' : '·'}
+            </span>
+            <span
+              className={`composite num ${moving ? 'counting' : ''} ${
+                change < 0 ? 'down' : change > 0 ? 'up' : ''
+              }`}
+            >
+              {shown.toFixed(2)}
+            </span>
+            <span
               key={latest?.id ?? 'open'}
               className={`change num flash ${change < 0 ? 'down' : change > 0 ? 'up' : ''}`}
             >
               {change === 0 ? '—' : `${change < 0 ? '▼' : '▲'} ${signed(change, 2)}`}
               {change !== 0 && ` (${signed(pct, 2)}%)`}
-            </div>
-            {status === 'CLOSED' && (
-              <div className="closed-banner">MARKET CLOSED — {composite.toFixed(2)}</div>
-            )}
-            <SessionChart points={series} />
+            </span>
+            {status === 'CLOSED' && <span className="closed-banner">MARKET CLOSED</span>}
           </div>
+
+          <Chart
+            series={series}
+            markers={markers}
+            openedAt={openedAt}
+            now={clockLabel()}
+            live={live}
+          />
 
           <div className="gauges">
             <Gauge label="JOBS" value={`${g.jobs.toFixed(1)}%`} bad={g.jobs > 4.8} />
@@ -421,27 +420,64 @@ function useLiveComposite(target: number, live: boolean) {
   return { shown, tick, moving };
 }
 
-/** Samples what the board is showing, so the session line creeps along continuously. */
-function useLiveSeries(moveChart: number[], shown: number, live: boolean): number[] {
+/**
+ * Samples what the board is showing, so the session line is drawn continuously rather
+ * than stepping only when the dais acts — and remembers where in that line each real
+ * move landed, so the chart can mark them.
+ */
+function useLiveSeries(moveChart: number[], shown: number, live: boolean, target: number) {
   const [series, setSeries] = useState<number[]>(moveChart);
+  const [markers, setMarkers] = useState<number[]>([]);
+  const [openedAt] = useState(() => clockLabel());
+
   const shownRef = useRef(shown);
   shownRef.current = shown;
+  const lengthRef = useRef(series.length);
+  lengthRef.current = series.length;
+  const chartRef = useRef(moveChart);
+  chartRef.current = moveChart;
+  const targetRef = useRef(target);
+  targetRef.current = target;
 
-  // A board opened mid-session starts from the real session so far, then grows.
-  const seeded = useRef(false);
+  /**
+   * Nothing is marked until the first server state has landed. Before that the board is
+   * still showing its placeholder, and a "change" in the composite is just the real
+   * session arriving — not a director pressing anything.
+   */
+  const armed = useRef(false);
+  const marked = useRef(target);
+  const firstSync = moveChart !== GAVEL_IN.chart;
   useEffect(() => {
-    if (seeded.current || moveChart.length <= 1) return;
-    seeded.current = true;
-    setSeries(moveChart);
-  }, [moveChart]);
+    if (armed.current || !firstSync) return;
+    armed.current = true;
+    marked.current = targetRef.current;
+    // Every step in the replayed chart was a move, by definition.
+    if (chartRef.current.length > 1) {
+      setSeries(chartRef.current);
+      setMarkers(chartRef.current.map((_, i) => i).slice(1));
+    }
+  }, [firstSync]);
+
+  useEffect(() => {
+    if (!armed.current || marked.current === target) return;
+    marked.current = target;
+    setMarkers((m) => [...m, lengthRef.current]);
+  }, [target]);
 
   useEffect(() => {
     if (!live) return;
-    const id = setInterval(() => setSeries((s) => pushSample(s, shownRef.current)), 1200);
+    const id = setInterval(() => {
+      setSeries((s) => {
+        const { series: next, decimated } = pushSample(s, shownRef.current);
+        // Decimation drops every other sample, so held indices move with it.
+        if (decimated) setMarkers((m) => [...new Set(m.map((i) => Math.floor(i / 2)))]);
+        return next;
+      });
+    }, 900);
     return () => clearInterval(id);
   }, [live]);
 
-  return series;
+  return { series, markers, openedAt };
 }
 
 /* ── pieces ────────────────────────────────────────────────────────── */
@@ -468,54 +504,14 @@ function Gauge({
   );
 }
 
-function SessionChart({ points }: { points: number[] }) {
-  const w = 1728;
-  const h = 128;
-  const series = points.length > 1 ? points : [COMPOSITE_OPEN, COMPOSITE_OPEN];
-  const lo = Math.min(...series, COMPOSITE_OPEN) - 12;
-  const hi = Math.max(...series, COMPOSITE_OPEN) + 12;
-  // Inset so the pulsing head at the live end isn't half-clipped by the edge.
-  const x = (i: number) => (i / (series.length - 1)) * (w - 14);
-  const y = (v: number) => h - ((v - lo) / (hi - lo)) * h;
-  const last = series[series.length - 1];
-  const down = last < COMPOSITE_OPEN;
-  return (
-    <svg className="chart" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <line
-        x1={0}
-        x2={w}
-        y1={y(COMPOSITE_OPEN)}
-        y2={y(COMPOSITE_OPEN)}
-        stroke="var(--ink-faint)"
-        strokeWidth={1.5}
-        strokeDasharray="10 12"
-      />
-      <polyline
-        points={series.map((v, i) => `${x(i)},${y(v)}`).join(' ')}
-        fill="none"
-        stroke={down ? 'var(--down)' : 'var(--up)'}
-        strokeWidth={4}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-      />
-      {/* The drawing end of the line, pulsing, so the eye knows it is still being drawn. */}
-      <circle
-        className="chart-head"
-        cx={x(series.length - 1)}
-        cy={y(last)}
-        r={6}
-        fill={down ? 'var(--down)' : 'var(--up)'}
-      />
-    </svg>
-  );
+function clockLabel(): string {
+  return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function Clock() {
   const [t, setT] = useState('');
   useEffect(() => {
-    const set = () =>
-      setT(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }));
+    const set = () => setT(clockLabel());
     set();
     const id = setInterval(set, 10_000);
     return () => clearInterval(id);

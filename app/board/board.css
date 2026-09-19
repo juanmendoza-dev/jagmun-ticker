@@ -159,8 +159,9 @@
 .stage {
   position: relative;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  padding: 34px 96px 64px;
+  grid-template-rows: auto auto 1fr auto;
+  row-gap: 14px;
+  padding: 30px 96px 64px;
 }
 
 .masthead {
@@ -208,29 +209,16 @@
   }
 }
 
-.readout {
-  align-self: center;
-  text-align: center;
-  position: relative;
-}
-
-.composite-row {
+.quote {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-}
-
-/* The direction of the last print. Small, constant, and the first thing that tells the
-   room the board is live rather than a slide. */
-.pip,
-.pip-spacer {
-  width: 54px;
-  flex: none;
+  align-items: baseline;
+  gap: 26px;
 }
 
 .pip {
-  font-size: 54px;
+  width: 44px;
+  flex: none;
+  font-size: 44px;
   line-height: 1;
   animation: pip 900ms ease-out;
 }
@@ -242,33 +230,31 @@
 @keyframes pip {
   0% {
     opacity: 1;
-    transform: translateY(0) scale(1.25);
+    transform: scale(1.3);
   }
   55% {
     opacity: 1;
   }
   100% {
     opacity: 0.25;
-    transform: translateY(0) scale(1);
+    transform: scale(1);
   }
 }
 
 .composite {
-  font-size: 250px;
-  line-height: 0.92;
+  font-size: 152px;
+  line-height: 1;
   font-weight: 700;
   letter-spacing: -0.02em;
 }
 
 .composite.counting {
-  text-shadow: 0 0 70px currentColor;
+  text-shadow: 0 0 60px currentColor;
 }
 
 .change {
-  margin-top: 6px;
-  font-size: 66px;
+  font-size: 58px;
   font-weight: 600;
-  letter-spacing: 0.01em;
 }
 
 .flash {
@@ -289,10 +275,60 @@
 
 .chart {
   display: block;
-  height: 132px;
   width: 100%;
-  margin-top: 30px;
-  opacity: 0.95;
+  height: 470px;
+  align-self: center;
+  overflow: visible;
+}
+
+.chart .grid {
+  stroke: #1b2231;
+  stroke-width: 1;
+}
+
+.chart .openline {
+  stroke: var(--ink-faint);
+  stroke-width: 2;
+  stroke-dasharray: 12 14;
+}
+
+.chart .lastline {
+  stroke-width: 1.5;
+  stroke-dasharray: 4 10;
+  opacity: 0.55;
+}
+
+.chart .axis {
+  fill: var(--ink-faint);
+  font-size: 22px;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+}
+
+.chart .time {
+  font-size: 20px;
+}
+
+.chart .openlabel {
+  fill: var(--ink-faint);
+  font-size: 21px;
+  font-family: var(--font-sans);
+  letter-spacing: 0.22em;
+}
+
+.chart .tag {
+  fill: #06080c;
+  font-size: 30px;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Where a director actually moved the market. */
+.chart .marker {
+  fill: var(--ground);
+  stroke-width: 4;
 }
 
 .chart-head {
@@ -303,11 +339,9 @@
   0%,
   100% {
     opacity: 1;
-    r: 6;
   }
   50% {
-    opacity: 0.35;
-    r: 9;
+    opacity: 0.3;
   }
 }
 
@@ -488,8 +522,7 @@
 /* ── closed ───────────────────────────────────────────────────────── */
 
 .closed-banner {
-  font-size: 44px;
-  letter-spacing: 0.3em;
+  font-size: 34px;
+  letter-spacing: 0.26em;
   color: var(--halted);
-  margin-top: 18px;
 }
