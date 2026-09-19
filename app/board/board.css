@@ -50,6 +50,10 @@
   font-weight: 700;
 }
 
+.tape-entry .flat {
+  color: var(--ink-dim);
+}
+
 .tape-entry .arrow {
   font-size: 26px;
 }
@@ -109,7 +113,7 @@
   position: relative;
   display: grid;
   grid-template-rows: auto 1fr auto;
-  padding: 34px 96px 40px;
+  padding: 34px 96px 64px;
 }
 
 .masthead {
@@ -194,10 +198,10 @@
 }
 
 .chart {
-  position: absolute;
-  inset: auto 0 -132px;
-  height: 128px;
+  display: block;
+  height: 132px;
   width: 100%;
+  margin-top: 30px;
   opacity: 0.95;
 }
 
@@ -206,8 +210,8 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 48px;
   border-top: 1px solid var(--line);
-  padding-top: 26px;
-  margin-top: 150px;
+  padding-top: 24px;
+  margin-bottom: 0;
 }
 
 .gauge-label {
@@ -218,7 +222,7 @@
 
 .gauge-value {
   margin-top: 8px;
-  font-size: 72px;
+  font-size: 64px;
   font-weight: 700;
   display: flex;
   align-items: baseline;
@@ -264,10 +268,12 @@
   left: 0;
   right: 0;
   bottom: 0;
-  padding: 22px 96px;
+  /* Sits over the ancillary footer labels, never over the gauge numbers. */
+  z-index: 30;
+  padding: 12px 96px;
   background: var(--down);
   color: #fff;
-  font-size: 40px;
+  font-size: 32px;
   font-weight: 700;
   letter-spacing: 0.06em;
   white-space: nowrap;

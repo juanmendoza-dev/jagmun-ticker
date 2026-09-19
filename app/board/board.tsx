@@ -126,12 +126,12 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
                       </>
                     ) : (
                       <>
-                        <span className={e.pct < 0 ? 'arrow down' : 'arrow up'}>
-                          {e.pct < 0 ? '▼' : '▲'}
+                        <span className={`arrow ${dirClass(e.pct)}`}>
+                          {e.pct < 0 ? '▼' : e.pct > 0 ? '▲' : '·'}
                         </span>
                         <span className="tk">{e.ticker}</span>
                         <span>{e.price.toFixed(2)}</span>
-                        <span className={e.pct < 0 ? 'down' : 'up'}>{signed(e.pct, 1)}%</span>
+                        <span className={dirClass(e.pct)}>{signed(e.pct, 1)}%</span>
                       </>
                     )}
                   </div>
@@ -305,6 +305,16 @@ function useAnimatedComposite(target: number, drifting: boolean): number {
   const [shown, setShown] = useState(target);
   const current = useRef(target);
   const wobble = useRef(0);
+  const seeded = useRef(false);
+
+  // A board opened mid-session should already be showing the real number, not count
+  // up to it from the open. Only moves that land while we are watching animate.
+  useEffect(() => {
+    if (seeded.current || target === COMPOSITE_OPEN) return;
+    seeded.current = true;
+    current.current = target;
+    setShown(target);
+  }, [target]);
 
   useEffect(() => {
     if (!drifting) {
@@ -319,9 +329,13 @@ function useAnimatedComposite(target: number, drifting: boolean): number {
 
   useEffect(() => {
     let raf = 0;
-    const step = () => {
+    let prev = performance.now();
+    const step = (now: number) => {
+      const dt = Math.min(now - prev, 100);
+      prev = now;
       const goal = target + wobble.current;
-      const next = current.current + (goal - current.current) * 0.06;
+      const k = 1 - Math.exp(-dt / 320);
+      const next = current.current + (goal - current.current) * k;
       current.current = Math.abs(goal - next) < 0.005 ? goal : next;
       setShown(current.current);
       raf = requestAnimationFrame(step);
@@ -368,6 +382,11 @@ function useScaleToViewport() {
 function lastMoveAt(s: BoardState): number {
   const at = s.moves[0]?.at;
   return at ? new Date(at).getTime() : 0;
+}
+
+/** Zero is neither up nor down — at the open, nothing on the tape should read green. */
+function dirClass(n: number): string {
+  return n < 0 ? 'down' : n > 0 ? 'up' : 'flat';
 }
 
 function signed(n: number, dp: number): string {
