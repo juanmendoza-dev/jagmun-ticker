@@ -121,8 +121,11 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
   const change = composite - COMPOSITE_OPEN;
   const pct = (change / COMPOSITE_OPEN) * 100;
 
+  // Only the recent ones. The rail scrolls in a fixed 90s, so letting this grow with
+  // the session would have the crawl flying past unreadably by the afternoon. The full
+  // log lives on the panel.
   const headlines = useMemo(
-    () => [...moves.map((m) => m.headline).filter(Boolean), ...OPENING_CRAWL],
+    () => [...moves.slice(0, 8).map((m) => m.headline).filter(Boolean), ...OPENING_CRAWL],
     [moves],
   );
 

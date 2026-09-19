@@ -56,9 +56,19 @@ function Controls() {
   const [busy, setBusy] = useState(false);
   const [armed, setArmed] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  const [who, setWho] = useState('');
   const synced = useRef(false);
   const cursor = useRef(-1);
   cursor.current = synced.current ? state.cursor : -1;
+
+  // Who is holding this phone. Several directors tap at once, so the log says which.
+  useEffect(() => {
+    try {
+      setWho(localStorage.getItem('jag_who') ?? '');
+    } catch {
+      /* private window, no matter */
+    }
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -90,7 +100,7 @@ function Controls() {
       const r = await fetch('/api/move', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: crypto.randomUUID(), ...payload }),
+        body: JSON.stringify({ id: crypto.randomUUID(), author: who || 'dais', ...payload }),
       });
       const body = await r.json();
       if (!r.ok) throw new Error(body?.error ?? 'failed');
@@ -204,18 +214,34 @@ function Controls() {
             </span>
             <span className="num">{signed(m.delta)}</span>
             <span className="what">{m.undoes ? 'undone' : m.headline.replace(/^BREAKING: /, '')}</span>
+            <span className="who">{m.author}</span>
           </div>
         ))}
       </div>
 
       <div className="session">
+        <input
+          className="who-field"
+          type="text"
+          maxLength={6}
+          placeholder="you"
+          value={who}
+          onChange={(e) => {
+            setWho(e.target.value);
+            try {
+              localStorage.setItem('jag_who', e.target.value);
+            } catch {
+              /* nothing to do */
+            }
+          }}
+        />
         {(['PRE', 'OPEN', 'CLOSED'] as SessionStatus[]).map((s) => (
           <button
             key={s}
             className={state.status === s ? 'on' : ''}
             onClick={() => void setStatus(s)}
           >
-            {s === 'PRE' ? 'PRE-MARKET' : s === 'OPEN' ? 'OPEN' : 'CLOSE'}
+            {s === 'PRE' ? 'PRE' : s === 'OPEN' ? 'OPEN' : 'CLOSE'}
           </button>
         ))}
       </div>

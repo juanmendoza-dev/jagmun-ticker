@@ -155,7 +155,7 @@ input::placeholder {
 
 .row {
   display: grid;
-  grid-template-columns: 52px 22px 78px 1fr;
+  grid-template-columns: 50px 20px 72px 1fr auto;
   gap: 8px;
   align-items: baseline;
   padding: 9px 0;
@@ -182,13 +182,25 @@ input::placeholder {
 .session {
   margin-top: 28px;
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
   justify-content: center;
 }
 
+input.who-field {
+  width: 74px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
 .session button {
   appearance: none;
+  white-space: nowrap;
   background: none;
   border: 1px solid var(--line);
   border-radius: 999px;
