@@ -1,4 +1,4 @@
-import Board from './board.tsx';
+import Board from './board';
 
 export const dynamic = 'force-dynamic';
 

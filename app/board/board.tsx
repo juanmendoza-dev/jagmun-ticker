@@ -8,9 +8,9 @@ import {
   OPENING_CRAWL,
   TIER_ORDER,
   type TierName,
-} from '@/lib/constants.ts';
-import { gauges, resolveDelta, tape } from '@/lib/derive.ts';
-import { type BoardState, GAVEL_IN } from '@/lib/state.ts';
+} from '@/lib/constants';
+import { gauges, resolveDelta, tape } from '@/lib/derive';
+import { type BoardState, GAVEL_IN } from '@/lib/state';
 import './board.css';
 
 const POLL_MS = 1500;
@@ -22,6 +22,7 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
   const [offline, setOffline] = useState(false);
   const [explainer, setExplainer] = useState(false);
   const [tier, setTier] = useState<TierName>('REAL');
+  const synced = useRef(false);
 
   useScaleToViewport();
   const { composite, status, moves } = state;
@@ -29,8 +30,8 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
 
   // Poll. On any failure we keep the last good state and keep rendering — the board
   // must survive the wifi dying mid-session (spec AC#7), not blank out.
-  const cursorRef = useRef(state.cursor);
-  cursorRef.current = state.cursor;
+  const cursorRef = useRef(-1);
+  cursorRef.current = synced.current ? state.cursor : -1;
   useEffect(() => {
     let alive = true;
     const tick = async () => {
@@ -39,7 +40,11 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
         if (!r.ok) throw new Error(String(r.status));
         const body = await r.json();
         if (!alive) return;
+        synced.current = true;
         if (body.state) setState(body.state);
+        // An unchanged poll still carries the session status, which the dais can flip
+        // between moves.
+        else if (body.status) setState((s) => (s.status === body.status ? s : { ...s, status: body.status }));
         setOffline(false);
       } catch {
         if (alive) setOffline(true);
