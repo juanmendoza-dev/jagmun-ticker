@@ -86,7 +86,7 @@ Continuous right-to-left scroll, seamless loop. Seven entries, repeating:
 
 ```
 ▼ WFC  23.36 -18.0%     ▼ BAC  16.95 -23.3%     ▼ MCO  26.93 -19.4%
-▼ NYT  12.17 -12.4%     ▼ WPO 363.95  -9.5%     ▼ GE   23.13 -15.3%
+▼ NYT  12.17 -12.4%     ▼ WPO 363.96  -9.5%     ▼ GE   23.13 -15.3%
   LEH   0.00  HALTED
 ```
 
