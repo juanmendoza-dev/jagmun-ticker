@@ -20,7 +20,7 @@ const IDLE_AFTER_MS = 12_000;
 export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) {
   const [state, setState] = useState<BoardState>(initial);
   const [offline, setOffline] = useState(false);
-  const [explainer, setExplainer] = useState(false);
+  const [explainerOverride, setExplainerOverride] = useState<boolean | null>(null);
   const [tier, setTier] = useState<TierName>('REAL');
   const synced = useRef(false);
 
@@ -85,11 +85,17 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
       if (n >= 1 && n <= 4) return setTier(TIER_ORDER[n - 1]);
       if (e.key === 'ArrowUp') return void fire(1);
       if (e.key === 'ArrowDown') return void fire(-1);
-      if (e.key.toLowerCase() === 'h') return setExplainer((v) => !v);
+      if (e.key.toLowerCase() === 'h') return setExplainerOverride((v) => !(v ?? preMarket.current));
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [fire]);
+
+  // Pre-market, the board is the explainer — it's what delegates read while they file
+  // in, and nobody has to remember to press a key for it. H overrides either way.
+  const preMarket = useRef(false);
+  preMarket.current = status === 'PRE';
+  const explainer = explainerOverride ?? status === 'PRE';
 
   const idle = status !== 'CLOSED' && Date.now() - lastMoveAt(state) > IDLE_AFTER_MS;
   const shown = useAnimatedComposite(composite, idle && status === 'OPEN');
@@ -188,7 +194,7 @@ export default function Board({ initial = GAVEL_IN }: { initial?: BoardState }) 
           {takeover && latest && (
             <div className={`takeover ${latest.dir > 0 ? 'good' : ''}`}>
               <div className="kicker">BREAKING</div>
-              <div className="line">{latest.headline}</div>
+              <div className="line">{strip(latest.headline)}</div>
               <div className="move num">
                 {latest.dir > 0 ? '▲' : '▼'} {signed(latest.delta, 2)} ON THE JAG COMPOSITE
               </div>
@@ -382,6 +388,11 @@ function useScaleToViewport() {
 function lastMoveAt(s: BoardState): number {
   const at = s.moves[0]?.at;
   return at ? new Date(at).getTime() : 0;
+}
+
+/** The takeover already says BREAKING in 46px letters; it needn't say it twice. */
+function strip(headline: string): string {
+  return headline.replace(/^BREAKING:\s*/, '');
 }
 
 /** Zero is neither up nor down — at the open, nothing on the tape should read green. */
