@@ -1,0 +1,243 @@
+/* Phone-first. A director uses this one-handed, standing, in a dim room. */
+
+.panel {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 18px 16px 48px;
+}
+
+.panel-head {
+  text-align: center;
+  padding: 10px 0 16px;
+}
+
+.panel-head .title {
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  color: var(--ink-dim);
+}
+
+.panel-head .value {
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin-top: 4px;
+}
+
+.panel-head .delta {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.panel-head .status {
+  margin-top: 8px;
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-faint);
+}
+
+.section-label {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--ink-dim);
+  margin: 14px 0 8px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  border-radius: 14px;
+  padding: 17px 10px;
+  font-family: inherit;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  /* Big enough to hit without looking, on a phone, standing up. */
+  min-height: 62px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform 0.08s ease,
+    filter 0.12s ease;
+}
+
+.btn:active {
+  transform: scale(0.97);
+  filter: brightness(1.35);
+}
+
+.btn:disabled {
+  opacity: 0.4;
+}
+
+.btn .pct {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+
+.btn.up {
+  border-color: #1d6b45;
+  color: var(--up);
+}
+
+.btn.down {
+  border-color: #7a2a2a;
+  color: var(--down);
+}
+
+.btn.armed {
+  box-shadow: 0 0 0 2px currentColor inset;
+}
+
+.headline-row {
+  margin-top: 16px;
+}
+
+.headline-row label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--ink-dim);
+  display: block;
+  margin-bottom: 7px;
+}
+
+input[type='text'],
+input[type='password'] {
+  width: 100%;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  padding: 14px;
+}
+
+input::placeholder {
+  color: var(--ink-faint);
+}
+
+.wide {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.log {
+  margin-top: 26px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.log h2 {
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: var(--ink-dim);
+  font-weight: 600;
+  margin: 0 0 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 52px 22px 78px 1fr;
+  gap: 8px;
+  align-items: baseline;
+  padding: 9px 0;
+  border-bottom: 1px solid #171d27;
+  font-size: 13px;
+}
+
+.row .t,
+.row .who {
+  color: var(--ink-faint);
+}
+
+.row .what {
+  color: var(--ink-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.row.undone .what {
+  text-decoration: line-through;
+}
+
+.session {
+  margin-top: 28px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.session button {
+  appearance: none;
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-faint);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  padding: 9px 16px;
+}
+
+.session button.on {
+  color: var(--ink);
+  border-color: var(--ink-dim);
+}
+
+.note {
+  margin-top: 18px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+  text-align: center;
+}
+
+.warn-strip {
+  background: #3a2a05;
+  color: #ffce6a;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  margin-bottom: 14px;
+}
+
+.gate {
+  max-width: 380px;
+  margin: 18vh auto 0;
+  padding: 0 20px;
+  text-align: center;
+}
+
+.gate .title {
+  font-size: 13px;
+  letter-spacing: 0.28em;
+  color: var(--ink-dim);
+  margin-bottom: 20px;
+}
+
+.gate .err {
+  color: var(--down);
+  font-size: 13px;
+  margin-top: 12px;
+}
