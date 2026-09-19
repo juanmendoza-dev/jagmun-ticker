@@ -33,7 +33,7 @@
 .tape-rail {
   display: flex;
   flex: none;
-  animation: slide 48s linear infinite;
+  animation: slide 40s linear infinite;
 }
 
 .tape-entry {
@@ -52,6 +52,46 @@
 
 .tape-entry .flat {
   color: var(--ink-dim);
+}
+
+/* Every print lights the cell for a moment. Six firms on six different clocks means
+   something on the tape is always lighting up. */
+.blip-up,
+.blip-down {
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin: -2px -8px;
+  animation: blip 900ms ease-out;
+}
+
+.blip-up {
+  animation-name: blip-up;
+}
+
+.blip-down {
+  animation-name: blip-down;
+}
+
+@keyframes blip-up {
+  0% {
+    background: var(--up);
+    color: #04160c;
+  }
+  100% {
+    background: transparent;
+    color: inherit;
+  }
+}
+
+@keyframes blip-down {
+  0% {
+    background: var(--down);
+    color: #fff;
+  }
+  100% {
+    background: transparent;
+    color: inherit;
+  }
 }
 
 .tape-entry .arrow {
@@ -101,8 +141,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* The numbers still print — that is information, not decoration — but nothing
+     scrolls, pulses or flashes. */
   .tape-rail,
-  .crawl-rail {
+  .crawl-rail,
+  .blip-up,
+  .blip-down,
+  .pip,
+  .chart-head,
+  .dot {
     animation: none;
   }
 }
@@ -167,11 +214,54 @@
   position: relative;
 }
 
+.composite-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 28px;
+}
+
+/* The direction of the last print. Small, constant, and the first thing that tells the
+   room the board is live rather than a slide. */
+.pip,
+.pip-spacer {
+  width: 54px;
+  flex: none;
+}
+
+.pip {
+  font-size: 54px;
+  line-height: 1;
+  animation: pip 900ms ease-out;
+}
+
+.pip.flat {
+  color: var(--ink-faint);
+}
+
+@keyframes pip {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1.25);
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.25;
+    transform: translateY(0) scale(1);
+  }
+}
+
 .composite {
   font-size: 250px;
   line-height: 0.92;
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.composite.counting {
+  text-shadow: 0 0 70px currentColor;
 }
 
 .change {
@@ -203,6 +293,22 @@
   width: 100%;
   margin-top: 30px;
   opacity: 0.95;
+}
+
+.chart-head {
+  animation: head 1.6s ease-in-out infinite;
+}
+
+@keyframes head {
+  0%,
+  100% {
+    opacity: 1;
+    r: 6;
+  }
+  50% {
+    opacity: 0.35;
+    r: 9;
+  }
 }
 
 .gauges {

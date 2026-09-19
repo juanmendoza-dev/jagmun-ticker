@@ -71,16 +71,25 @@ bottom never stop moving, the middle is the number.
   delegates are colorblind and red/green is not a universal convention.
 - **Tabular figures everywhere** (`font-variant-numeric: tabular-nums`) so digits don't jitter.
 - **Color means one thing each:** green up, red down, grey halted. Nothing else gets color.
-- **The board never freezes.** Tape and crawl always scroll; when nothing has happened for a
-  while the rendered Composite wobbles ±0.3% around its true value so the screen is alive during
-  unmoderated caucus. **Drift is display-only** — it never writes to stored state, or eight hours
-  of wobble would random-walk the index and replay could not reproduce it.
+- **The board never stops printing.** Not "it animates when the dais acts" — a market that only
+  moves on command reads as a slide. Between moves the Composite keeps printing new values at
+  irregular intervals (~0.4–1.0s), every firm on the tape prints on its own separate clock
+  (~0.7–2.4s) and lights its cell as it does, the session line keeps being drawn, and a direction
+  pip beside the headline number flips with each print. Something is always moving.
+- **Prints are display-only and bounded.** The noise is mean-reverting and capped at ±0.25% for
+  the Composite, ±0.6% for a firm, so the display wanders around the true value and can never walk
+  away from it. It never touches stored state — otherwise eight hours of wobble would random-walk
+  the index and replay could not reproduce the board.
+- **A print must never be mistaken for a move.** The cap is well under a Tier 1 (±1%), and a real
+  move additionally counts up over ~1.6s, flashes, and writes a headline. Two vocabularies, so the
+  room can tell "the market is alive" from "we just did something."
 - Respect `prefers-reduced-motion` on the continuous scrollers.
 
 ### 2.2 Motion
 
 | Size | Board behavior |
 |---|---|
+| *(between moves)* | The tape prints continuously — see §2.1. Never nothing. |
 | Small / Real | Number counts to its new value over ~1.5s, flashing its direction color. |
 | Major | Same, harder flash, plus a full-width headline bar for ~10s. |
 | Systemic | Breaking-news takeover: headline full screen, the move, then back. A ±20% move should stop conversation in the room. |
@@ -171,6 +180,10 @@ price = open_price × (composite / 1000) ^ beta
 Banks fall faster than newspapers, which is both true and legible on the tape without anybody
 configuring it. `LEH` is pinned at `0.00 / HALTED`, grey, no arrow, always in the tape — it costs
 nothing and is a standing reminder in the room of what failure looks like.
+
+The tape prints live noise on top of these derived prices ([§2.1](#21-visual-rules-non-negotiable)),
+which is display-only. The number the gauges and the tape are derived *from* is always the true
+Composite.
 
 **Gauges**, with `D = max(0, 1000 − composite)`:
 
